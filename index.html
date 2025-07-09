@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pomodoro App</title>
+    <link rel="stylesheet" href="./style.css" />
+    <!-- FontAwesome for icons -->
+    <script src="https://kit.fontawesome.com/a2e0e6b31d.js" crossorigin="anonymous"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="app-container">
+      <h1>Pomodoro <i class="fas fa-hourglass-start"></i></h1>
+      <div class="app-message">Press start to begin</div>
+
+      <!-- Focus Text Field -->
+      <input type="text" placeholder="What are you focusing on?" class="focus-input" />
+
+      <!-- Custom Duration Input -->
+      <input
+        type="number"
+        placeholder="Custom time (min)"
+        class="custom-time-input"
+        min="1"
+      />
+
+      <!-- Timer Mode Buttons -->
+      <div class="timer-buttons">
+        <button data-time="25" class="timer-mode active">Pomodoro</button>
+        <button data-time="5" class="timer-mode">Short Break</button>
+        <button data-time="15" class="timer-mode">Long Break</button>
+      </div>
+
+      <!-- Timer Circle -->
+      <div class="app-circle">
+        <div class="circle-shape">
+          <div class="semi-circle right-side circle-mask"></div>
+          <div class="semi-circle right-side circle"></div>
+          <div class="semi-circle left-side circle-mask"></div>
+          <div class="semi-circle left-side circle"></div>
+        </div>
+        <div class="app-counter-box">
+          <p><span class="minutes">25</span>:<span class="seconds">00</span></p>
+        </div>
+        <button class="btn-start"><i class="fas fa-play"></i> Start</button>
+        <button class="btn-reset"><i class="fas fa-sync"></i> Reset</button>
+      </div>
+    </div>
+    <script src="app.js"></script>
+  </body>
+</html>
