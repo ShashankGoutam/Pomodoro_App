@@ -4,6 +4,8 @@ A modern, customizable **Pomodoro timer** built using **HTML**, **CSS**, and **J
 
 ---
 
+![Pomodoro Timer Screenshot](./screenshot.png)
+
 ## 🎯 What is the Pomodoro Technique?
 
 The Pomodoro Technique is a time management method that helps improve focus and productivity. It divides work into focused intervals (typically 25 minutes), followed by short breaks to rest and recharge.
