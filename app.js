@@ -1,31 +1,75 @@
 const bells = new Audio('./sounds/preview.mp3');
+
 const startBtn = document.querySelector('.btn-start');
+const pauseBtn = document.querySelector('.btn-pause');
 const resetBtn = document.querySelector('.btn-reset');
+const muteBtn = document.querySelector('.btn-mute');
 const message = document.querySelector('.app-message');
 const minuteDisplay = document.querySelector('.minutes');
 const secondDisplay = document.querySelector('.seconds');
 const timerModes = document.querySelectorAll('.timer-mode');
+const customInput = document.querySelector('.custom-time-input');
+const focusInput = document.querySelector('.focus-input');
+const leftCircle = document.querySelector('.left-side.circle');
+const rightCircle = document.querySelector('.right-side.circle');
+
+const STORAGE_KEYS = {
+  focusTask: 'pomodoro.focusTask',
+  selectedMode: 'pomodoro.selectedMode',
+  customMinutes: 'pomodoro.customMinutes',
+  isMuted: 'pomodoro.isMuted',
+};
+
+function getStoredValue(key) {
+  try {
+    return localStorage.getItem(key);
+  } catch (error) {
+    return null;
+  }
+}
+
+function setStoredValue(key, value) {
+  try {
+    localStorage.setItem(key, value);
+  } catch (error) {
+    // Ignore storage failures (for example in restricted preview environments).
+  }
+}
+
+const MODE_MINUTES = {
+  pomodoro: 25,
+  shortBreak: 5,
+  longBreak: 15,
+};
 
 let myInterval;
-let totalSeconds = 25 * 60;
-let duration = 25 * 60;
-let state = true;
+let totalSeconds = MODE_MINUTES.pomodoro * 60;
+let duration = MODE_MINUTES.pomodoro * 60;
+let isRunning = false;
+let isPaused = false;
+let isMuted = false;
+let currentMode = 'pomodoro';
 
-// Handle Mode Switching
-timerModes.forEach((btn) => {
-  btn.addEventListener('click', () => {
-    clearInterval(myInterval);
-    state = true;
-    timerModes.forEach((b) => b.classList.remove('active'));
-    btn.classList.add('active');
-    const minutes = parseInt(btn.getAttribute('data-time'));
-    duration = minutes * 60;
-    totalSeconds = duration;
-    updateDisplay(minutes, 0);
-    message.textContent = 'Press start to begin';
-    startBtn.disabled = false;
-  });
-});
+function getFocusText() {
+  const focusText = focusInput.value.trim();
+  return focusText ? `Focus: ${focusText}` : 'Session running...';
+}
+
+function updateStatus(baseMessage = 'Press start to begin') {
+  const focusText = focusInput.value.trim();
+
+  if (baseMessage === 'Session running...') {
+    message.textContent = getFocusText();
+    return;
+  }
+
+  if ((baseMessage === 'Session paused.' || baseMessage === 'Session complete!') && focusText) {
+    message.textContent = `${baseMessage} (${focusText})`;
+    return;
+  }
+
+  message.textContent = baseMessage;
+}
 
 function updateDisplay(mins, secs) {
   minuteDisplay.textContent = `${mins}`;
@@ -33,97 +77,252 @@ function updateDisplay(mins, secs) {
 }
 
 function updateProgressCircle(percent) {
-  const left = document.querySelector('.left-side.circle');
-  const right = document.querySelector('.right-side.circle');
-
   const angle = percent * 360;
 
   if (angle <= 180) {
-    right.style.transform = `rotate(${angle}deg)`;
-    left.style.transform = `rotate(0deg)`;
+    rightCircle.style.transform = `rotate(${angle}deg)`;
+    leftCircle.style.transform = 'rotate(0deg)';
   } else {
-    right.style.transform = `rotate(180deg)`;
-    left.style.transform = `rotate(${angle - 180}deg)`;
+    rightCircle.style.transform = 'rotate(180deg)';
+    leftCircle.style.transform = `rotate(${angle - 180}deg)`;
   }
 }
 
-function appTimer() {
-  if (!state) return alert('Session already running!');
-  state = false;
+function persistSettings() {
+  setStoredValue(STORAGE_KEYS.focusTask, focusInput.value);
+  setStoredValue(STORAGE_KEYS.selectedMode, currentMode);
+  setStoredValue(STORAGE_KEYS.customMinutes, customInput.value);
+  setStoredValue(STORAGE_KEYS.isMuted, String(isMuted));
+}
+
+function setActiveMode(modeName) {
+  currentMode = modeName;
+  timerModes.forEach((modeBtn) => {
+    modeBtn.classList.toggle('active', modeBtn.dataset.mode === modeName);
+  });
+}
+
+function setMode(modeName) {
+  clearInterval(myInterval);
+  isRunning = false;
+  isPaused = false;
+
+  setActiveMode(modeName);
+  const minutes = MODE_MINUTES[modeName];
+  duration = minutes * 60;
+  totalSeconds = duration;
+
+  customInput.value = '';
+  pauseBtn.disabled = true;
+  pauseBtn.innerHTML = '<i class="fas fa-pause"></i> Pause';
+
+  updateDisplay(minutes, 0);
+  updateProgressCircle(0);
+  updateStatus('Press start to begin');
+  startBtn.disabled = false;
+
+  persistSettings();
+}
+
+function applyCustomDuration(minutes) {
+  clearInterval(myInterval);
+  isRunning = false;
+  isPaused = false;
+
+  duration = minutes * 60;
+  totalSeconds = duration;
+  setActiveMode('custom');
+
+  pauseBtn.disabled = true;
+  pauseBtn.innerHTML = '<i class="fas fa-pause"></i> Pause';
+
+  updateDisplay(minutes, 0);
+  updateProgressCircle(0);
+  updateStatus('Custom timer ready');
+  startBtn.disabled = false;
+
+  persistSettings();
+}
+
+function requestNotificationPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
+function notifyCompletion() {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification('Pomodoro complete', {
+      body: 'Great work! Time for your next break or focus block.',
+    });
+  }
+}
+
+function onTimerComplete() {
+  clearInterval(myInterval);
+  isRunning = false;
+  isPaused = false;
+  pauseBtn.disabled = true;
+  pauseBtn.innerHTML = '<i class="fas fa-pause"></i> Pause';
+  startBtn.disabled = false;
+
+  if (!isMuted) {
+    bells.currentTime = 0;
+    bells.play();
+  }
+
+  updateStatus('Session complete!');
+  notifyCompletion();
+}
+
+function tick() {
+  const minutesLeft = Math.floor(totalSeconds / 60);
+  const secondsLeft = totalSeconds % 60;
+  updateDisplay(minutesLeft, secondsLeft);
+
+  const percentElapsed = 1 - totalSeconds / duration;
+  updateProgressCircle(percentElapsed);
+
+  if (totalSeconds <= 0) {
+    onTimerComplete();
+    return;
+  }
+
+  totalSeconds -= 1;
+}
+
+function startTimer() {
+  if (isRunning) {
+    return;
+  }
+
+  isRunning = true;
+  isPaused = false;
+
   startBtn.disabled = true;
-  message.textContent = 'Session running...';
+  pauseBtn.disabled = false;
+  pauseBtn.innerHTML = '<i class="fas fa-pause"></i> Pause';
 
-  myInterval = setInterval(() => {
-    const minutesLeft = Math.floor(totalSeconds / 60);
-    const secondsLeft = totalSeconds % 60;
-    updateDisplay(minutesLeft, secondsLeft);
+  updateStatus('Session running...');
+  requestNotificationPermission();
 
-    const percentElapsed = 1 - totalSeconds / duration;
-    updateProgressCircle(percentElapsed);
+  tick();
+  myInterval = setInterval(tick, 1000);
+}
 
-    if (totalSeconds <= 0) {
-      bells.play();
-      clearInterval(myInterval);
-      message.textContent = 'Session complete!';
-      state = true;
-      startBtn.disabled = false;
-      return;
-    }
+function pauseTimer() {
+  if (!isRunning) {
+    return;
+  }
 
-    totalSeconds--;
-  }, 1000);
+  clearInterval(myInterval);
+  isRunning = false;
+  isPaused = true;
+
+  startBtn.disabled = false;
+  pauseBtn.disabled = false;
+  pauseBtn.innerHTML = '<i class="fas fa-play"></i> Resume';
+
+  updateStatus('Session paused.');
 }
 
 function resetTimer() {
   clearInterval(myInterval);
+  isRunning = false;
+  isPaused = false;
+
   totalSeconds = duration;
-  state = true;
   updateProgressCircle(0);
   updateDisplay(Math.floor(duration / 60), 0);
-  message.textContent = 'Press start to begin';
+  updateStatus('Press start to begin');
+
   startBtn.disabled = false;
+  pauseBtn.disabled = true;
+  pauseBtn.innerHTML = '<i class="fas fa-pause"></i> Pause';
 }
 
-startBtn.addEventListener('click', appTimer);
-resetBtn.addEventListener('click', resetTimer);
+function toggleMute() {
+  isMuted = !isMuted;
+  muteBtn.setAttribute('aria-pressed', String(isMuted));
+  muteBtn.innerHTML = isMuted
+    ? '<i class="fas fa-volume-mute"></i> Muted'
+    : '<i class="fas fa-volume-up"></i> Sound On';
+  persistSettings();
+}
 
-const customInput = document.querySelector('.custom-time-input');
+function loadSavedSettings() {
+  const savedFocusTask = getStoredValue(STORAGE_KEYS.focusTask);
+  const savedMode = getStoredValue(STORAGE_KEYS.selectedMode);
+  const savedCustomMinutes = getStoredValue(STORAGE_KEYS.customMinutes);
+  const savedMuteState = getStoredValue(STORAGE_KEYS.isMuted);
 
-function appTimer() {
-  if (!state) return alert('Session already running!');
-  state = false;
-  startBtn.disabled = true;
-  message.textContent = 'Session running...';
-
-  // 🔁 Use custom time if provided
-  const customMinutes = parseInt(customInput.value);
-  if (!isNaN(customMinutes) && customMinutes > 0) {
-    totalSeconds = customMinutes * 60;
-    duration = totalSeconds;
+  if (savedFocusTask) {
+    focusInput.value = savedFocusTask;
   }
 
-  myInterval = setInterval(() => {
-    const minutesLeft = Math.floor(totalSeconds / 60);
-    const secondsLeft = totalSeconds % 60;
-    updateDisplay(minutesLeft, secondsLeft);
+  if (savedMuteState === 'true') {
+    isMuted = true;
+    muteBtn.setAttribute('aria-pressed', 'true');
+    muteBtn.innerHTML = '<i class="fas fa-volume-mute"></i> Muted';
+  }
 
-    const percentElapsed = 1 - totalSeconds / duration;
-    updateProgressCircle(percentElapsed);
+  if (savedCustomMinutes && Number(savedCustomMinutes) > 0) {
+    customInput.value = savedCustomMinutes;
+    applyCustomDuration(Number(savedCustomMinutes));
+    return;
+  }
 
-    if (totalSeconds <= 0) {
-      bells.play();
-      clearInterval(myInterval);
-      message.textContent = 'Session complete!';
-      state = true;
-      startBtn.disabled = false;
-      return;
-    }
+  if (savedMode && MODE_MINUTES[savedMode]) {
+    setMode(savedMode);
+    return;
+  }
 
-    totalSeconds--;
-  }, 1000);
+  setMode('pomodoro');
 }
 
+focusInput.addEventListener('input', () => {
+  if (isRunning) {
+    updateStatus('Session running...');
+  }
+  persistSettings();
+});
 
-// Initial Display Setup
-updateDisplay(25, 0);
+customInput.addEventListener('change', () => {
+  const customMinutes = Number(customInput.value);
+
+  if (!Number.isInteger(customMinutes) || customMinutes <= 0) {
+    customInput.value = '';
+    if (!isRunning && !isPaused) {
+      updateStatus('Enter a valid custom duration in minutes.');
+    }
+    persistSettings();
+    return;
+  }
+
+  applyCustomDuration(customMinutes);
+});
+
+timerModes.forEach((modeBtn) => {
+  modeBtn.addEventListener('click', () => {
+    const selectedMode = modeBtn.dataset.mode;
+    setMode(selectedMode);
+  });
+});
+
+startBtn.addEventListener('click', startTimer);
+pauseBtn.addEventListener('click', () => {
+  if (isRunning) {
+    pauseTimer();
+    return;
+  }
+
+  if (isPaused) {
+    startTimer();
+  }
+});
+resetBtn.addEventListener('click', resetTimer);
+muteBtn.addEventListener('click', toggleMute);
+
+// Initial Setup
+loadSavedSettings();
 updateProgressCircle(0);

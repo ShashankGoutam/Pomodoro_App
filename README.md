@@ -1,6 +1,6 @@
 # ⏳ Pomodoro Timer App
 
-A modern, customizable **Pomodoro timer** built using **HTML**, **CSS**, and **JavaScript** — enhanced with smooth animations, session modes, custom duration input, and clean responsive design.
+A modern, customizable **Pomodoro timer** built using **HTML**, **CSS**, and **JavaScript** — enhanced with smooth animations, session modes, custom duration input, pause/resume controls, and a clean responsive design.
 
 ---
 
@@ -19,47 +19,49 @@ The Pomodoro Technique is a time management method that helps improve focus and 
   - Short Break (5 minutes)
   - Long Break (15 minutes)
 
-- 🧠 **Custom Duration Input** – Enter any focus time
-
-- 🖊️ **Focus Task Field** – Type what you’re working on
-
+- 🧠 **Custom Duration Mode** – Enter any focus time and run it as a custom session
+- 🖊️ **Focus Task Field** – Track what you are currently working on
+- ⏯️ **Start / Pause / Resume / Reset Controls**
+- 🔔 **Completion Alerts** – Sound + browser notification support
+- 🔇 **Mute Toggle** – Quickly silence completion sound
+- 💾 **Saved Preferences** – Remembers selected mode, custom time, task text, and mute state
 - 🔘 **Animated Circular Progress Ring**
-
-- 🔊 **Sound Notification on Completion**
-
-- 💡 **FontAwesome Icons + Smooth Transitions**
-
-- 📱 **Mobile Responsive**
+- 📱 **Mobile Responsive + Improved Accessibility**
 
 ---
 
 ## 📂 Project Structure
-```
+
+```text
 pomodoro-app/
 ├── index.html
 ├── style.css
 ├── app.js
 ├── sounds/
 │ └── preview.mp3
-├── README.md
+└── README.md
 ```
-
 
 ---
 
 ## 💻 How to Use
 
-### ▶️ Run locally:
+### ▶️ Run locally
 
 ```bash
 git clone https://github.com/ShashankGoutam/Pomodoro_App.git
-cd Pomodoro_App-main
+cd Pomodoro_App
 ```
 
-Then open index.html in your browser.
+Open `index.html` directly in your browser, or run a static server:
 
-💡 For best results, use a local server (e.g., VS Code’s Live Server extension)
+```bash
+python3 -m http.server 8000
+```
 
+Then visit `http://localhost:8000`.
+
+---
 
 ## 🌐 Live Demo
 
@@ -69,7 +71,7 @@ Then open index.html in your browser.
 
 ## 🙌 Credits & Tools
 
-- [FontAwesome](https://fontawesome.com) – Icons  
-- [Google Fonts](https://fonts.google.com) – Typography  
-- [Cool Backgrounds](https://coolbackgrounds.io) – Background inspiration  
+- [FontAwesome](https://fontawesome.com) – Icons
+- [Google Fonts](https://fonts.google.com) – Typography
+- [Cool Backgrounds](https://coolbackgrounds.io) – Background inspiration
 - Developed by [Shashank Goutam](https://github.com/ShashankGoutam)
